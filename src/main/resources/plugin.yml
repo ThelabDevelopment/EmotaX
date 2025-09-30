@@ -1,11 +1,11 @@
 name: EmotaX
 main: net.rimaki.emotax.EmotaXPlugin
 # Remember: version and api must be strings, use quotes like "1.0.0"
-version: "1.0.0-SNAPSHOT+2025_09_29"
+version: "1.0.0-SNAPSHOT+2025_09_30"
 api: "2.0.0"
 load: POSTWORLD
 author: RimakiProject & ThelabDevelopment
 # author and authors are treated as one combined list
 authors: ["RimakiTaema"]
-description: An Custom Emote Plugin Thats auto loads via resource pack file With emote config
+description: An Custom Emote Plugin That's auto loads via resource pack file With emote config
 website: https://rimakiproject.net/emotax
