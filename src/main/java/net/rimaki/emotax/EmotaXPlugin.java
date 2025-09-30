@@ -1,5 +1,15 @@
 package net.rimaki.emotax;
 
+/*
+ * EmotaX Plugin v1.0.0
+ * Copyright (c) 2025 Rimaki
+ * Licensed under MIT License
+ *
+ * ⚠️ Content Responsibility Notice:
+ * Users are responsible for any animations (emotes) they import.
+ * The plugin author assumes no liability for user-generated content.
+ */
+
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.Config;
 import cn.nukkit.utils.ConfigSection;
