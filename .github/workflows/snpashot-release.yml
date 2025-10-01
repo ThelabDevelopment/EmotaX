@@ -1,0 +1,106 @@
+name: Build & Release Snapshot
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Read project version
+        id: version
+        uses: christian-draeger/read-properties@1.1.1
+        with:
+          path: 'gradle.properties'
+          properties: 'version'
+
+      - name: Check if version is SNAPSHOT
+        id: check_snapshot
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
+            echo "is_snapshot=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected SNAPSHOT version: $VERSION"
+          else
+            echo "is_snapshot=false" >> $GITHUB_OUTPUT
+            echo "❌ Not a SNAPSHOT version: $VERSION"
+            echo "⚠️ This workflow is for SNAPSHOT builds only. Skipping release."
+            exit 0
+          fi
+
+      - name: Build project
+        if: steps.check_snapshot.outputs.is_snapshot == 'true'
+        run: ./gradlew build
+
+      - name: Generate snapshot info
+        if: steps.check_snapshot.outputs.is_snapshot == 'true'
+        id: snapshot_info
+        run: |
+          SNAPSHOT_TAG="snapshot-$(date +'%Y%m%d-%H%M%S')"
+          echo "snapshot_tag=$SNAPSHOT_TAG" >> $GITHUB_OUTPUT
+          
+          echo "SNAPSHOT_INFO<<EOF" >> $GITHUB_ENV
+          echo "📦 **Snapshot Build**" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "- **Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_ENV
+          echo "- **Built:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "## Recent Changes" >> $GITHUB_ENV
+          git log -5 --pretty=format:"- %s (%h) by %an" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Calculate sha256 checksums
+        if: steps.check_snapshot.outputs.is_snapshot == 'true'
+        run: |
+          mkdir -p build/hash/sha256
+          for file in build/libs/*.jar; do
+            sha256sum "$file" > "build/hash/sha256/$(basename $file).sha256"
+          done
+
+      - name: Release snapshot build
+        if: steps.check_snapshot.outputs.is_snapshot == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.snapshot_info.outputs.snapshot_tag }}
+          name: "Snapshot Build - ${{ steps.version.outputs.version }}"
+          prerelease: true
+          body: |
+            ${{ env.SNAPSHOT_INFO }}
+            
+            ---
+            ⚠️ **Warning:** This is a development snapshot and may be unstable.
+            
+            **Commit:** https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+            
+            🛠️ To install:
+            1. Download the JAR(s) below
+            2. Place in your server's `plugins/` folder
+            3. Restart your server
+          files: |
+            build/libs/*.jar
+            build/hash/sha256/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
