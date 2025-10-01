@@ -1,0 +1,113 @@
+name: Build & Release Plugin
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Read project version
+        id: version
+        uses: christian-draeger/read-properties@1.1.1
+        with:
+          path: 'gradle.properties'
+          properties: 'version'
+
+      - name: Check if version is NOT SNAPSHOT
+        id: check_release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "❌ Detected SNAPSHOT version: $VERSION"
+            echo "⚠️ Cannot create normal release from SNAPSHOT version."
+            echo "⚠️ Please update version in gradle.properties to remove SNAPSHOT suffix."
+            exit 1
+          else
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "✅ Valid release version detected: $VERSION"
+          fi
+
+      - name: Build project
+        run: ./gradlew build
+
+      - name: Create Git tag for version
+        run: |
+          VERSION=v${{ steps.version.outputs.version }}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag $VERSION
+            git push origin $VERSION
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION=${{ env.VERSION }}
+          echo "Building changelog for $VERSION"
+          LAST_TAG=$(git describe --tags --abbrev=0 --exclude=$VERSION 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tag found, including all commits."
+            git log --pretty=format:"- %s (%h) by %an" > CHANGELOG.txt
+          else
+            echo "Previous tag: $LAST_TAG"
+            git log $LAST_TAG..HEAD --pretty=format:"- %s (%h) by %an" > CHANGELOG.txt
+          fi
+          echo "CHANGES<<EOF" >> $GITHUB_ENV
+          cat CHANGELOG.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Calculate sha256 checksums
+        run: |
+          mkdir -p build/hash/sha256
+          for file in build/libs/*.jar; do
+            sha256sum "$file" > "build/hash/sha256/$(basename $file).sha256"
+          done
+
+      - name: Release build
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: "Release ${{ env.VERSION }}"
+          body: |
+            ## 🚀 Changes in ${{ env.VERSION }}
+            ${{ env.CHANGES }}
+
+            **Commit:** https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+
+            ---
+            🛠️ To update:
+            1. Download the JAR(s) below
+            2. Place in your server's `plugins/` folder
+            3. Restart your server
+          files: |
+            build/libs/*.jar
+            build/hash/sha256/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
