@@ -30,10 +30,10 @@ jobs:
 
       - name: Read project version
         id: version
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: 'gradle.properties'
-          properties: 'version'
+        run: |
+          VERSION=$(grep -oP 'version\s*=\s*"\K[^"]+' build.gradle.kts)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
       - name: Check if version is SNAPSHOT
         id: check_snapshot
