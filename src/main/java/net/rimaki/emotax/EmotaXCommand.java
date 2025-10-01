@@ -5,7 +5,6 @@ import cn.nukkit.command.CommandSender;
 import cn.nukkit.command.PluginCommand;
 import cn.nukkit.command.data.CommandEnum;
 import cn.nukkit.command.data.CommandParameter;
-import cn.nukkit.command.simple.CommandParameters;
 import cn.nukkit.command.tree.ParamList;
 import cn.nukkit.command.utils.CommandLogger;
 
@@ -16,7 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class EmotaXCommand extends PluginCommand<EmotaXPlugin> {
-    String placeholdcmd = EmotaXPlugin.INSTANCE.placeholdercmd;
+    String placeholdcmd = EmotaXPlugin.INSTANCE.getConfig().getString("Placeholder", "[EmotaX]");
     public EmotaXCommand() {
         // init Supper Command
         super("emotax", "emotax.emotaxcommamd.description", EmotaXPlugin.INSTANCE);
@@ -31,10 +30,10 @@ public class EmotaXCommand extends PluginCommand<EmotaXPlugin> {
         this.getCommandParameters().put("version", new CommandParameter[]{
                 CommandParameter.newEnum("pluginver", false, new CommandEnum("showpluginver", "version")),
         });
-        this.getCommandParameters().put("listemote", new CommandParameter[]{
+        this.getCommandParameters().put("list", new CommandParameter[]{
                 CommandParameter.newEnum("emotelisting", false, new CommandEnum("showemotelist", "list")),
         });
-        this.getCommandParameters().put("reloadcfg", new CommandParameter[]{
+        this.getCommandParameters().put("reload", new CommandParameter[]{
                 CommandParameter.newEnum("configreloading", false, new CommandEnum("configreload", "reload")),
         });
         this.enableParamTree();
@@ -72,7 +71,7 @@ public class EmotaXCommand extends PluginCommand<EmotaXPlugin> {
                 for (int i = 0; i < args.size(); i++) {
                     typed.append(" ").append(args.getResult(i).toString());
                 }
-                sender.sendMessage(placeholdcmd + "Unknown Command" + typed);
+                sender.sendMessage(placeholdcmd + " Unknown Command " + typed);
                 return 0;
             }
         }

@@ -23,6 +23,6 @@ public class EventListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        player.sendMessage(placehold + "You're Using EmotaX : " + ver);
+        player.sendMessage(placehold + " You're Using EmotaX : " + ver);
     }
 }

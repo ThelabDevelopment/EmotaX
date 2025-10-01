@@ -11,9 +11,12 @@ package net.rimaki.emotax;
  */
 
 import cn.nukkit.plugin.PluginBase;
+import cn.nukkit.registry.RegisterException;
+import cn.nukkit.registry.Registries;
 import cn.nukkit.utils.Config;
 import cn.nukkit.utils.ConfigSection;
 import cn.nukkit.utils.TextFormat;
+import net.rimaki.emotax.item.EmotaXMenu;
 
 // Plugin Class
 
@@ -31,6 +34,12 @@ public class EmotaXPlugin extends PluginBase {
         INSTANCE = this;
         plver = this.getDescription().getVersion();
         plauthors = String.join(", ", this.getDescription().getAuthors());
+
+        try {
+            Registries.ITEM.registerCustomItem(this, EmotaXMenu.class);
+        } catch (RegisterException e) {
+            throw new RuntimeException(e);
+        }
         // String VERSION = INSTANCE.getDescription().getVersion();
         // Disabled For Now
         // I18N = PluginI18nManager.register(this);
@@ -58,7 +67,7 @@ public class EmotaXPlugin extends PluginBase {
         placeholdercmd = config.getString("Placeholder", "[EmotaX]");
         this.getServer().getPluginManager().registerEvents(new EventListener(this), this);
         this.getLogger().info(TextFormat.DARK_GREEN + "EmotaX Plugin Enabled Successfuly Yay!");
-        this.getLogger().info(placeholdercmd + " You're Running EmotaX : " + plver + "\n Made by : " + plauthors);
+        this.getLogger().info("You're Running EmotaX : " + plver + "\n Made by : " + plauthors);
     }
     @Override
     public void onDisable() {
